@@ -4,13 +4,13 @@
 
 **Conectar el cronograma con lo que realmente ocurre en obra.** Proyecto de Power BI que integra la línea base de Microsoft Project con reportes semanales de ejecución para comparar avance, identificar desviaciones y revisar actividades.
 
-![Presentación conceptual con datos ficticios](docs/images/portada.png)
+![Caso real DARCA II](docs/images/portada.png)
 
 **Power BI · DAX · Power Query · Microsoft Project · Python · Excel**
 
-[Explorar el reporte](powerbi/) · [Entender las métricas](docs/METRICAS.md) · [Preparar la demo](#explora-el-proyecto) · [Proyecto complementario: Cortes de obra](https://github.com/loyal5889/automatizacion-cortes-de-obra)
+[Explorar el reporte](powerbi/) · [Entender las métricas](docs/METRICAS.md) · [Archivos reales](#explora-el-proyecto) · [Proyecto complementario: Cortes de obra](https://github.com/loyal5889/automatizacion-cortes-de-obra)
 
-> La imagen es una ilustración del caso de uso con datos sintéticos; no es una captura del dashboard operativo. Aquí se publica la definición editable del reporte y del modelo, sin los datos de la obra original.
+> Caso real de **DARCA II**: se incluyen el cronograma, nueve reportes semanales y el PBIX disponible al 20 de octubre de 2026. La portada es una presentación del proyecto, no una captura del tablero.
 
 ## La pregunta que resuelve
 
@@ -49,25 +49,22 @@ flowchart LR
 - [Extractor de Microsoft Project](src/extractor_project.py): lectura COM y salida CSV.
 - [Métricas y supuestos](docs/METRICAS.md): definición de avance y limitaciones de interpretación.
 
-### 2. Generar fuentes ficticias
+### 2. Consultar los archivos reales
 
-```bash
-git clone https://github.com/loyal5889/dashboard-avance-programado-vs-real-curva-s.git
-cd dashboard-avance-programado-vs-real-curva-s
-python -m pip install -r requirements.txt
-python scripts/crear_demo.py
-```
+- [Cronograma exportado de Project](fuentes_darca/cronograma/cronograma_darca2.csv).
+- [Nueve reportes semanales de DARCA II](fuentes_darca/reportes/).
+- [Descargar el PBIX existente](powerbi/DARCA%202%20TABLERO%20AVANCE.pbix).
 
-Se crean `data/demo/output/cronograma_darca2.csv` y cuatro reportes en `data/demo/avance_real/`. Contienen seis actividades ficticias, con 100 m² cada una y avances semanales de 10, 20, 25 y 15 m². El script no sobrescribe fuentes existentes.
+Se conserva el contenido original de estos archivos. El PBIX es una copia del archivo guardado; no se ha actualizado ni certificado que sus datos internos incluyan todos los reportes publicados. Los nombres semanales pueden abarcar días posteriores a la fecha de publicación: revise las fechas y cantidades registradas en la hoja DATOS.
 
 ### 3. Abrir en Power BI Desktop
 
-1. Use una versión de Power BI Desktop compatible con proyectos PBIP y definiciones PBIR/TMDL.
-2. Las rutas de la edición pública apuntan a **`C:\Datos\Demo`**. Copie allí las carpetas `output` y `avance_real` generadas, o ajuste las rutas de las consultas en su copia del modelo.
-3. Abra `powerbi/DARCA 2 AGENTE.pbip` y actualice las fuentes locales.
-4. Revise la fecha de evaluación: algunas medidas usan `TODAY()` y la demo tiene fechas fijas de enero/febrero de 2026. El resultado depende del contexto temporal seleccionado.
+1. Para consultar el archivo guardado, abra el PBIX en Power BI Desktop.
+2. Para trabajar con la definición editable, abra `powerbi/DARCA 2 AGENTE.pbip` con una versión compatible con PBIP y PBIR/TMDL.
+3. Configure las fuentes de su copia para leer `fuentes_darca/cronograma/cronograma_darca2.csv` y `fuentes_darca/reportes/`. La definición pública conserva la ruta de instalación `C:\Datos\Demo`: alternativamente, copie el CSV a `C:\Datos\Demo\output` y los reportes a `C:\Datos\Demo\avance_real`. El nombre de esa ruta no implica datos ficticios.
+4. Actualice localmente y revise el contexto de fecha: algunas medidas usan `TODAY()`.
 
-La actualización y la visualización requieren Power BI Desktop. Esta edición no incluye un PBIX con datos precargados ni un enlace público a Power BI Service. No se ha certificado una actualización del modelo público en todos los entornos de Desktop.
+No se ha realizado una actualización del modelo en Desktop durante esta publicación. No hay un tablero interactivo alojado en Power BI Service.
 
 ### 4. Conectar un cronograma propio
 

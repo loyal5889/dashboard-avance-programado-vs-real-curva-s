@@ -31,7 +31,4 @@ métricas se necesitan definiciones y fuentes adicionales.
 
 ## Fuentes y publicación
 
-El portafolio conserva las definiciones del reporte y modelo; reemplaza las rutas
-personales por `C:\Datos\Demo`. No publica MPP, PBIX, fuentes ni cachés de clientes.
-Los generadores de demostración producen datos nuevos y ficticios. La portada es
-una ilustración didáctica y no evidencia de una actualización del modelo en Desktop.
+Se incluyen fuentes reales de DARCA II y el PBIX guardado al momento de la copia. Las definiciones editables mantienen rutas de instalación `C:\Datos\Demo`; el README explica cómo conectarlas a los archivos reales publicados. No se ha actualizado el modelo en Desktop durante esta publicación. Los generadores sintéticos se conservan solo para las pruebas automatizadas.

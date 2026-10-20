@@ -13,3 +13,5 @@ data/
 input/
 avance_real/
 *.zip
+
+!powerbi/*.pbix
