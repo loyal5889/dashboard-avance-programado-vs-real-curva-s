@@ -1,4 +1,0 @@
-relationship e56268c1-5cf3-797a-9da7-2d466e8d7eea
-	fromColumn: avance_real.WBS
-	toColumn: cronograma_darca2.WBS
-
