@@ -1,0 +1,533 @@
+table Calendario
+	lineageTag: 8b0f17a1-c613-4295-8a34-c5127a5257fc
+
+	measure 'Avance Programado Curva S' =
+			
+			VAR FechaEvaluacion =
+			    MAX('Calendario'[Date])
+			
+			VAR ActividadesValidas =
+			    FILTER(
+			        ALL('cronograma_darca2'),
+			        'cronograma_darca2'[Summary] = FALSE()
+			            && 'cronograma_darca2'[Milestone] = FALSE()
+			            && 'cronograma_darca2'[Active] = TRUE()
+			            && 'cronograma_darca2'[BaselineDurationDays] > 0
+			    )
+			
+			VAR DuracionTotal =
+			    SUMX(
+			        ActividadesValidas,
+			        'cronograma_darca2'[BaselineDurationDays]
+			    )
+			
+			RETURN
+			SUMX(
+			    ActividadesValidas,
+			
+			    VAR Inicio =
+			        INT('cronograma_darca2'[BaselineStart])
+			
+			    VAR Fin =
+			        INT('cronograma_darca2'[BaselineFinish])
+			
+			    VAR Duracion =
+			        'cronograma_darca2'[BaselineDurationDays]
+			
+			    VAR Peso =
+			        DIVIDE(
+			            Duracion,
+			            DuracionTotal,
+			            0
+			        )
+			
+			    VAR AvanceActividad =
+			        SWITCH(
+			            TRUE(),
+			            FechaEvaluacion < Inicio, 0,
+			            FechaEvaluacion >= Fin, 1,
+			            MIN(
+			                1,
+			                MAX(
+			                    0,
+			                    DIVIDE(
+			                        NETWORKDAYS(
+			                            Inicio,
+			                            FechaEvaluacion,
+			                            11
+			                        ),
+			                        Duracion,
+			                        0
+			                    )
+			                )
+			            )
+			        )
+			
+			    RETURN
+			        Peso * AvanceActividad
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: 9b902bbf-c1c2-4dbf-ac2e-305f80bcfb78
+
+	measure 'Cantidad Ejecutada Acumulada' =
+			
+			VAR FechaActual =
+			    MAX('avance_real'[Fecha Corte])
+			
+			VAR WBSActual =
+			    SELECTEDVALUE('avance_real'[WBS])
+			
+			RETURN
+			IF(
+			    ISBLANK(WBSActual),
+			    BLANK(),
+			    CALCULATE(
+			        SUM('avance_real'[Cantidad Ejecutada Semana]),
+			        FILTER(
+			            ALL('avance_real'),
+			            'avance_real'[WBS] = WBSActual
+			                && 'avance_real'[Fecha Corte] <= FechaActual
+			        )
+			    )
+			)
+		formatString: 0
+		lineageTag: baa4699b-e585-4df7-a5f8-7eefdad68568
+
+	measure 'Aporte Real' =
+			
+			VAR WBSActual =
+			    SELECTEDVALUE('avance_real'[WBS])
+			
+			VAR DuracionActividad =
+			    CALCULATE(
+			        MAX('cronograma_darca2'[BaselineDurationDays]),
+			        'cronograma_darca2'[WBS] = WBSActual
+			    )
+			
+			VAR DuracionTotal =
+			    CALCULATE(
+			        SUM('cronograma_darca2'[BaselineDurationDays]),
+			        FILTER(
+			            ALL('cronograma_darca2'),
+			            'cronograma_darca2'[Summary] = FALSE()
+			                && 'cronograma_darca2'[Milestone] = FALSE()
+			                && 'cronograma_darca2'[Active] = TRUE()
+			                && 'cronograma_darca2'[BaselineDurationDays] > 0
+			        )
+			    )
+			
+			VAR PesoActividad =
+			    DIVIDE(
+			        DuracionActividad,
+			        DuracionTotal,
+			        0
+			    )
+			
+			RETURN
+			IF(
+			    ISBLANK(WBSActual),
+			    BLANK(),
+			    PesoActividad * [% Real Actividad]
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: a7f84a13-074f-4abe-b818-3a665bdaa118
+
+	measure 'Avance Real Total' =
+			
+			SUMX(
+			    VALUES('avance_real'[WBS]),
+			    [Aporte Real]
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: 79557dd9-a676-4011-9abd-faf7ee12a72b
+
+	measure 'Desviación Avance' =
+			
+			[Avance Real Total] - [Avance Programado Total]
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: b45602d8-b9c4-48df-9291-bed7755bdf0c
+
+	measure 'Actividades Programadas en Ejecución' =
+			
+			VAR FechaCorte =
+			    INT([Fecha Corte])
+			
+			RETURN
+			CALCULATE(
+			    COUNTROWS('cronograma_darca2'),
+			    FILTER(
+			        'cronograma_darca2',
+			        'cronograma_darca2'[Summary] = FALSE()
+			            && 'cronograma_darca2'[Milestone] = FALSE()
+			            && 'cronograma_darca2'[Active] = TRUE()
+			            && 'cronograma_darca2'[BaselineDurationDays] > 0
+			            && INT('cronograma_darca2'[BaselineStart]) <= FechaCorte
+			            && INT('cronograma_darca2'[BaselineFinish]) >= FechaCorte
+			    )
+			)
+		formatString: 0
+		lineageTag: 4b4fef5f-3686-4f1e-a63c-15ae48b36086
+
+	measure 'Actividades en Ejecución' =
+			
+			VAR FechaCorte =
+			    INT([Fecha Corte])
+			
+			VAR TablaActividades =
+			    FILTER(
+			        'cronograma_darca2',
+			        'cronograma_darca2'[Summary] = FALSE()
+			            && 'cronograma_darca2'[Milestone] = FALSE()
+			            && 'cronograma_darca2'[Active] = TRUE()
+			            && 'cronograma_darca2'[DurationDays] > 0
+			            && INT('cronograma_darca2'[Start]) <= FechaCorte
+			            && INT('cronograma_darca2'[Finish]) >= FechaCorte
+			    )
+			
+			RETURN
+			CONCATENATEX(
+			    TablaActividades,
+			    'cronograma_darca2'[TaskName],
+			    UNICHAR(10)
+			)
+		lineageTag: e6d3145e-4ded-46ce-ab52-d469288b7695
+
+	measure 'Fecha Fin Programada' =
+			
+			CALCULATE(
+			    MAX('cronograma_darca2'[BaselineFinish]),
+			    FILTER(
+			        ALL('cronograma_darca2'),
+			        'cronograma_darca2'[BaselineFinish] <> BLANK()
+			    )
+			)
+		formatString: Short Date
+		lineageTag: e65fe674-d28f-4fb1-8acf-16fef7611d22
+
+	measure 'Última Fecha Corte Real' =
+			
+			CALCULATE(
+			    MAX('avance_real'[Fecha Corte]),
+			    ALL('avance_real')
+			)
+		formatString: Short Date
+		lineageTag: 4dbe585c-f1de-4228-b742-ad1a79c642ab
+
+	measure 'Actividades Ejecutadas Último Corte' =
+			
+			VAR UltimoCorte =
+			    [Última Fecha Corte Real]
+			
+			VAR TablaActividades =
+			    FILTER(
+			        'avance_real',
+			        'avance_real'[Fecha Corte] = UltimoCorte
+			            && 'avance_real'[Cantidad Ejecutada Semana] > 0
+			    )
+			
+			RETURN
+			CONCATENATEX(
+			    TablaActividades,
+			    'avance_real'[Actividad],
+			    UNICHAR(10)
+			)
+		lineageTag: 2ceafa3f-17ce-43ef-bc30-f7a078b456c7
+
+	measure 'Cantidad Total Actividad' =
+			
+			MAX('avance_real'[Cantidad Total])
+		formatString: 0.00
+		lineageTag: eb239a5b-6ee8-4f8f-a75f-66715b9d4b75
+
+	measure '% Real Actividad Visual' =
+			
+			IF(
+			    ISINSCOPE('cronograma_darca2'[Actividad Project]),
+			    [% Real Actividad],
+			    [Avance Real Total]
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: fc0f80d8-7121-48ea-b283-f92134468219
+
+	measure '% Real Actividad' =
+			
+			VAR CantidadTotal =
+			    MAX('avance_real'[Cantidad Total])
+			
+			VAR CantidadEjecutada =
+			    [Cantidad Ejecutada Acumulada]
+			
+			RETURN
+			MIN(
+			    1,
+			    DIVIDE(
+			        CantidadEjecutada,
+			        CantidadTotal,
+			        0
+			    )
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: d4d7f7b8-089b-4586-908a-78e3439866ef
+
+	measure 'Aporte Real Visual' =
+			
+			IF(
+			    ISINSCOPE('cronograma_darca2'[Actividad Project]),
+			    [Aporte Real],
+			    [Avance Real Total]
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: 4cd351bb-e850-4fa9-91f6-ae685a5a2c1c
+
+	measure 'Unidad Visual' =
+			
+			IF(
+			    ISINSCOPE('cronograma_darca2'[Actividad Project]),
+			    SELECTEDVALUE('avance_real'[Unidad]),
+			    BLANK()
+			)
+		lineageTag: 217bea82-cf0f-4a5a-b3cc-da98dcdbe0b9
+
+	measure 'Unidad Visual2' =
+			
+			IF(
+			    ISINSCOPE('cronograma_darca2'[Actividad Project]),
+			    SELECTEDVALUE('avance_real'[Unidad]),
+			    BLANK()
+			)
+		lineageTag: e09e9b77-739e-4358-9f6a-8641e91e04db
+
+	measure 'Cantidad Total Visual' =
+			
+			IF(
+			    ISINSCOPE('cronograma_darca2'[Actividad Project]),
+			    MAX('avance_real'[Cantidad Total]),
+			    BLANK()
+			)
+		lineageTag: 618a69d0-d02b-4a08-8e48-97a87ec8eee7
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Avance Programado al Corte Real' =
+			
+			VAR FechaCorteReal =
+			    [Última Fecha Corte Real]
+			
+			VAR ActividadesValidas =
+			    FILTER(
+			        ALL('cronograma_darca2'),
+			        'cronograma_darca2'[Summary] = FALSE()
+			            && 'cronograma_darca2'[Milestone] = FALSE()
+			            && 'cronograma_darca2'[Active] = TRUE()
+			            && 'cronograma_darca2'[BaselineDurationDays] > 0
+			    )
+			
+			VAR DuracionTotal =
+			    SUMX(
+			        ActividadesValidas,
+			        'cronograma_darca2'[BaselineDurationDays]
+			    )
+			
+			RETURN
+			SUMX(
+			    ActividadesValidas,
+			
+			    VAR Inicio =
+			        INT('cronograma_darca2'[BaselineStart])
+			
+			    VAR Fin =
+			        INT('cronograma_darca2'[BaselineFinish])
+			
+			    VAR Duracion =
+			        'cronograma_darca2'[BaselineDurationDays]
+			
+			    VAR Peso =
+			        DIVIDE(Duracion, DuracionTotal, 0)
+			
+			    VAR AvanceActividad =
+			        SWITCH(
+			            TRUE(),
+			            FechaCorteReal < Inicio, 0,
+			            FechaCorteReal >= Fin, 1,
+			            MIN(
+			                1,
+			                MAX(
+			                    0,
+			                    DIVIDE(
+			                        NETWORKDAYS(Inicio, FechaCorteReal, 11),
+			                        Duracion,
+			                        0
+			                    )
+			                )
+			            )
+			        )
+			
+			    RETURN
+			        Peso * AvanceActividad
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: 2d11be90-3b4c-46b3-90af-4d4714a470e7
+
+	measure 'Estado Proyecto' =
+			
+			VAR Desviacion =
+			    [Desviación Avance]
+			
+			RETURN
+			SWITCH(
+			    TRUE(),
+			    Desviacion < -0.02, "ATRASADO",
+			    Desviacion > 0.02, "ADELANTADO",
+			    "EN LÍNEA"
+			)
+		lineageTag: 148c84a7-a819-42a0-8a74-4b5d05fd9600
+
+	measure 'Desviación por Actividad' =
+			
+			VAR Programado =
+			    [% Programado Actividad al Corte Real]
+			
+			VAR Real =
+			    CALCULATE(
+			        [% Real Actividad],
+			        KEEPFILTERS('cronograma_darca2')
+			    )
+			
+			VAR EsActividadValida =
+			    SELECTEDVALUE('cronograma_darca2'[Summary]) = FALSE()
+			        && SELECTEDVALUE('cronograma_darca2'[Milestone]) = FALSE()
+			        && SELECTEDVALUE('cronograma_darca2'[Active]) = TRUE()
+			
+			RETURN
+			IF(
+			    NOT ISINSCOPE('cronograma_darca2'[Actividad Project])
+			        || NOT EsActividadValida,
+			    BLANK(),
+			    Real - Programado
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: aa724fec-ee32-4712-9921-1beaab29f3f2
+
+	measure '% Programado Actividad al Corte Real' =
+			
+			VAR FechaCorteReal =
+			    [Última Fecha Corte Real]
+			
+			VAR InicioBase =
+			    INT(SELECTEDVALUE('cronograma_darca2'[BaselineStart]))
+			
+			VAR FinBase =
+			    INT(SELECTEDVALUE('cronograma_darca2'[BaselineFinish]))
+			
+			VAR DuracionBase =
+			    SELECTEDVALUE('cronograma_darca2'[BaselineDurationDays])
+			
+			VAR EsActividadValida =
+			    SELECTEDVALUE('cronograma_darca2'[Summary]) = FALSE()
+			        && SELECTEDVALUE('cronograma_darca2'[Milestone]) = FALSE()
+			        && SELECTEDVALUE('cronograma_darca2'[Active]) = TRUE()
+			        && DuracionBase > 0
+			
+			VAR DiasTranscurridos =
+			    NETWORKDAYS(
+			        InicioBase,
+			        FechaCorteReal,
+			        11
+			    )
+			
+			VAR PorcentajeProgramado =
+			    DIVIDE(
+			        DiasTranscurridos,
+			        DuracionBase,
+			        0
+			    )
+			
+			RETURN
+			IF(
+			    NOT EsActividadValida,
+			    BLANK(),
+			    SWITCH(
+			        TRUE(),
+			        FechaCorteReal < InicioBase, 0,
+			        FechaCorteReal >= FinBase, 1,
+			        MIN(1, MAX(0, PorcentajeProgramado))
+			    )
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: ac5fcf48-71d8-4b7b-a6d2-3a0d07110265
+
+	measure 'Estado Actividad' =
+			
+			VAR EsResumen =
+			    SELECTEDVALUE('cronograma_darca2'[Summary])
+			
+			VAR EsHito =
+			    SELECTEDVALUE('cronograma_darca2'[Milestone])
+			
+			VAR Desviacion =
+			    [Desviación por Actividad]
+			
+			RETURN
+			IF(
+			    NOT ISINSCOPE('cronograma_darca2'[Actividad Project])
+			        || EsResumen = TRUE()
+			        || EsHito = TRUE(),
+			    BLANK(),
+			    SWITCH(
+			        TRUE(),
+			        Desviacion < -0.02, "ATRASADO",
+			        Desviacion > 0.02, "ADELANTADO",
+			        "EN LÍNEA"
+			    )
+			)
+		lineageTag: 3acc1db8-2aeb-4b21-b37d-6e8e0851e566
+
+	measure 'Desviación Actividad Visual' =
+			
+			IF(
+			    ISINSCOPE('cronograma_darca2'[Actividad Project]),
+			    [Desviación por Actividad],
+			    [Desviación Avance]
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: 96b68273-00f8-42b7-8381-9c3bdf8e070a
+
+	column Date
+		formatString: Short Date
+		lineageTag: cfa2029b-72d3-4fd1-8fcd-5471a01485f6
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Calendario = calculated
+		mode: import
+		source =
+				
+				VAR FechaInicio =
+				    MINX(
+				        FILTER(
+				            'cronograma_darca2',
+				            'cronograma_darca2'[BaselineStart] <> BLANK()
+				        ),
+				        INT('cronograma_darca2'[BaselineStart])
+				    )
+				
+				VAR FechaFin =
+				    MAXX(
+				        FILTER(
+				            'cronograma_darca2',
+				            'cronograma_darca2'[BaselineFinish] <> BLANK()
+				        ),
+				        INT('cronograma_darca2'[BaselineFinish])
+				    )
+				
+				RETURN
+				CALENDAR(
+				    FechaInicio,
+				    FechaFin
+				)
+
+	annotation PBI_Id = 28ebd35e074d472e8cbe73bf4157104d
+

@@ -1,0 +1,181 @@
+table avance_real
+	lineageTag: aab80230-f5b8-4f8e-b515-3b3f0d2acb53
+
+	measure 'Avance Real Curva S' =
+			
+			VAR FechaEvaluacion =
+			    MAX('Calendario'[Date])
+			
+			VAR FechaInicioProyecto =
+			    CALCULATE(
+			        MIN('cronograma_darca2'[BaselineStart]),
+			        FILTER(
+			            ALL('cronograma_darca2'),
+			            'cronograma_darca2'[BaselineStart] <> BLANK()
+			        )
+			    )
+			
+			VAR EsFechaCorteReal =
+			    CALCULATE(
+			        COUNTROWS('avance_real'),
+			        FILTER(
+			            ALL('avance_real'),
+			            'avance_real'[Fecha Corte] = FechaEvaluacion
+			        )
+			    ) > 0
+			
+			VAR AvanceEnFecha =
+			    CALCULATE(
+			        [Avance Real Total],
+			        FILTER(
+			            ALL('avance_real'[Fecha Corte]),
+			            'avance_real'[Fecha Corte] <= FechaEvaluacion
+			        )
+			    )
+			
+			RETURN
+			SWITCH(
+			    TRUE(),
+			
+			    FechaEvaluacion = INT(FechaInicioProyecto),
+			        0,
+			
+			    EsFechaCorteReal,
+			        AvanceEnFecha,
+			
+			    BLANK()
+			)
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: 59005a3a-739e-42c4-b579-3fe24033ecf7
+
+	measure 'Proyección Curva S' =
+			
+			VAR FechaEnEje = MAX('Calendario'[Date])
+			VAR FechaCorte = DATE(2026, 10, 3)
+			VAR AvanceCorte = 0.5327
+			VAR PendienteDiaria = 0.0121715008
+			VAR DiasDesdeCorte =
+			    DATEDIFF(FechaCorte, FechaEnEje, DAY)
+			RETURN
+			    IF(
+			        FechaEnEje < FechaCorte,
+			        BLANK(),
+			        MIN(1, AvanceCorte + PendienteDiaria * DiasDesdeCorte)
+			    )
+		formatString: 0.00\ %;-0.00\ %;0.00\ %
+		lineageTag: cc889cb6-f1fc-4cad-95e2-7d253aa8e90c
+
+	column 'Fecha Corte'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: f568bd8e-f165-4030-a9d1-de163f6e3e4a
+		summarizeBy: none
+		sourceColumn: Fecha Corte
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column ID
+		dataType: int64
+		formatString: 0
+		lineageTag: d6070c57-635f-44a2-b6f4-884fcfb09ef3
+		summarizeBy: count
+		sourceColumn: ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column WBS
+		dataType: string
+		lineageTag: 60178824-e0fa-4a18-adfc-6b12fa48d0a6
+		summarizeBy: none
+		sourceColumn: WBS
+
+		annotation SummarizationSetBy = Automatic
+
+	column Actividad
+		dataType: string
+		lineageTag: e75e73cf-cdbc-465f-af1c-a1d70d273816
+		summarizeBy: none
+		sourceColumn: Actividad
+
+		annotation SummarizationSetBy = Automatic
+
+	column Tramo
+		dataType: string
+		lineageTag: ecf3fd40-6380-432d-a50d-fc662569cc7f
+		summarizeBy: none
+		sourceColumn: Tramo
+
+		annotation SummarizationSetBy = Automatic
+
+	column Unidad
+		dataType: string
+		lineageTag: 36c73d83-afe8-4ddb-a803-a3ac6b03dfd9
+		summarizeBy: none
+		sourceColumn: Unidad
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Cantidad Total'
+		dataType: double
+		formatString: 0.00
+		lineageTag: 0bd95115-ede7-4167-92b0-0c8c2dfaff6a
+		summarizeBy: sum
+		sourceColumn: Cantidad Total
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Cantidad Ejecutada Semana'
+		dataType: double
+		formatString: 0.00
+		lineageTag: dedce31f-4163-4aba-9b53-90891a6efc68
+		summarizeBy: none
+		sourceColumn: Cantidad Ejecutada Semana
+
+		annotation SummarizationSetBy = User
+
+	column Observación
+		dataType: string
+		lineageTag: cc9504cf-f964-48c7-a7db-511241a38b8e
+		summarizeBy: none
+		sourceColumn: Observación
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Source.Name'
+		dataType: string
+		lineageTag: fad07222-5522-4424-94e7-3b3308fbec51
+		summarizeBy: none
+		sourceColumn: Source.Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Actividad Real' =
+			
+			'avance_real'[WBS]
+			    & " "
+			    & 'avance_real'[Actividad]
+		lineageTag: eb4498c7-72e3-4da7-a9ff-f32b6649095a
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition avance_real = m
+		mode: import
+		source =
+				let
+				    Source = Folder.Files("C:\Datos\Demo\avance_real"),
+				    #"Filtered Hidden Files1" = Table.SelectRows(Source, each [Attributes]?[Hidden]? <> true),
+				    #"Invoke Custom Function1" = Table.AddColumn(#"Filtered Hidden Files1", "Transform File", each #"Transform File"([Content])),
+				    #"Renamed Columns1" = Table.RenameColumns(#"Invoke Custom Function1", {"Name", "Source.Name"}),
+				    #"Removed Other Columns1" = Table.SelectColumns(#"Renamed Columns1", {"Source.Name", "Transform File"}),
+				    #"Expanded Table Column1" = Table.ExpandTableColumn(#"Removed Other Columns1", "Transform File", Table.ColumnNames(#"Transform File"(#"Sample File"))),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Expanded Table Column1",{{"WBS", type text}, {"Actividad", type text}, {"Fecha Corte", type date}, {"Unidad", type text}, {"ID", Int64.Type}, {"Cantidad Total", type number}, {"Cantidad Ejecutada Semana", type number}, {"Observación", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+
